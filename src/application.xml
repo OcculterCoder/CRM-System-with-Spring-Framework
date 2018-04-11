@@ -1,0 +1,72 @@
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="
+			http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+			http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+			http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+	<!-- Transaction Manager Bean -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    	<property name="dataSource" ref="dataSource"/>
+	</bean>
+
+
+	<!-- Service Beans -->
+	<bean id="customerService" class="services.customers.CustomerManagementServiceProductionImpl">
+		<constructor-arg ref="customerDao"></constructor-arg>
+	</bean>
+	
+	<bean id="diaryService" class="services.diary.DiaryManagementServiceProductionImpl">
+		<constructor-arg ref="actionDao"></constructor-arg>
+	</bean>
+	
+	<bean id="callService" class="services.calls.CallHandlingServiceImpl">
+	
+		<constructor-arg ref="customerService"/> 
+		<constructor-arg ref="diaryService"/>
+		
+	</bean>
+	
+	
+	<!-- Data Access Objects(DAO) Beans -->
+	<bean id="customerDao" class="dataaccess.CustomerDaoJdbcTemplate" init-method="createTables">
+		<constructor-arg ref="template"></constructor-arg>
+	</bean>
+	
+	<bean id="actionDao" class="dataaccess.ActionDaoJdbcImpl" init-method="createTables">
+		<constructor-arg ref="template"></constructor-arg>
+	</bean>
+	
+	
+	<!-- Template Bean -->
+	<bean id="template" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	
+	
+	<!-- Data Source Bean -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="org.hsqldb.jdbcDriver"/>
+		<property name="url" value="jdbc:hsqldb:file:database.dat;shutdown=true"/>
+		<property name="username" value="sa"/>
+		<property name="password" value=""/>
+	</bean>
+	
+	<!-- Advice bean -->
+	<bean id="performanceAdvice" class="aop.advice.PerformanceTimingAdvice"/>
+	
+	<!-- Advice Weaving -->
+	<aop:config>
+		<aop:aspect ref="performanceAdvice">
+			<aop:around method="recordTiming"
+						pointcut="execution(* services..*.*(..))"/>
+		</aop:aspect>
+	</aop:config>
+	
+	<!-- Tx annotation -->
+	<tx:annotation-driven/>
+	
+</beans>
